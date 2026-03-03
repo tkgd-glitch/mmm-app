@@ -1973,4 +1973,150 @@ if uploaded_file is not None:
             st.info("「モデルチューニング」タブで分析を実行してください。")
 
 else:
-    st.markdown(f'<div style="text-align: center; padding: 6rem 2rem; background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 2rem; border: 1px solid rgba(255,255,255,0.8); margin-top: 3rem; box-shadow: 0 16px 40px -5px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1); transition: all 0.3s ease;"><div style="background: rgba(37,99,235,0.1); width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: {COLOR_PRIMARY}; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div><h2 style="color: {COLOR_TEXT_MAIN}; margin-bottom: 0.75rem; font-weight: 800; font-size: 2rem; letter-spacing: -0.04em;">OptiMix MMM へようこそ</h2><p style="color: {COLOR_GRAY}; font-size: 1.15rem; max-width: 600px; margin: 0 auto; line-height: 1.7;">左側のサイドバーから、分析したいCSVファイルをドラッグ＆ドロップしてマーケティング分析を開始してください。</p></div>', unsafe_allow_html=True)
+    # --- 修正: アニメーション付きのインタラクティブ・チュートリアル (スライダー) ---
+    tutorial_html = f"""
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+    <meta charset="utf-8">
+    <style>
+        body {{ margin: 0; padding: 0; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 500px; }}
+        .slider-container {{ width: 100%; max-width: 800px; height: 460px; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 16px 40px -5px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1); }}
+        .slides {{ display: flex; width: 500%; height: 100%; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }}
+        .slide {{ width: 20%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; box-sizing: border-box; text-align: center; opacity: 0; transition: opacity 0.6s ease; }}
+        .slide.active {{ opacity: 1; }}
+        
+        h2 {{ color: {COLOR_TEXT_MAIN}; margin-top: 0; margin-bottom: 16px; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }}
+        p {{ color: {COLOR_GRAY}; font-size: 16px; line-height: 1.7; max-width: 500px; margin: 0; }}
+        
+        .icon-wrapper {{ width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.6); position: relative; }}
+        .icon-wrapper::after {{ content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; background: inherit; filter: blur(15px); opacity: 0.4; z-index: -1; }}
+        
+        /* 動きの演出（アニメーション） */
+        .float-anim {{ animation: float 3s ease-in-out infinite; }}
+        .pulse-anim {{ animation: pulse 2s ease-in-out infinite; }}
+        .wave-anim {{ animation: wave 3s linear infinite; }}
+        
+        @keyframes float {{ 0% {{ transform: translateY(0px); }} 50% {{ transform: translateY(-12px); }} 100% {{ transform: translateY(0px); }} }}
+        @keyframes pulse {{ 0% {{ transform: scale(1); }} 50% {{ transform: scale(1.05); }} 100% {{ transform: scale(1); }} }}
+        @keyframes wave {{ 0% {{ transform: rotate(0deg); }} 25% {{ transform: rotate(-5deg); }} 75% {{ transform: rotate(5deg); }} 100% {{ transform: rotate(0deg); }} }}
+        
+        .step-badge {{ background: {COLOR_TEXT_MAIN}; color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 20px; letter-spacing: 1px; text-transform: uppercase; }}
+        
+        /* ナビゲーションボタン */
+        .nav-btn {{ position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; display: flex; align-items: center; justify-content: center; color: {COLOR_PRIMARY}; transition: all 0.2s ease; z-index: 10; }}
+        .nav-btn:hover {{ background: {COLOR_LIGHT_BG}; transform: translateY(-50%) scale(1.1); }}
+        .prev-btn {{ left: 20px; }}
+        .next-btn {{ right: 20px; }}
+        
+        .dots {{ position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; }}
+        .dot {{ width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; cursor: pointer; transition: all 0.3s ease; }}
+        .dot.active {{ background: {COLOR_PRIMARY}; width: 24px; border-radius: 5px; }}
+    </style>
+    </head>
+    <body>
+        <div class="slider-container">
+            <div class="slides" id="slides">
+                <!-- Slide 1 -->
+                <div class="slide active">
+                    <div class="step-badge" style="background: {COLOR_PRIMARY};">Welcome</div>
+                    <div class="icon-wrapper float-anim" style="background: rgba(37,99,235,0.1); color: {COLOR_PRIMARY};">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
+                    <h2>OptiMix MMM へようこそ</h2>
+                    <p>データサイエンスとマーケターの知見を融合した究極のツール。<br>このガイドで、ダッシュボードの使い方を4つのステップで確認しましょう。</p>
+                </div>
+                
+                <!-- Slide 2 -->
+                <div class="slide">
+                    <div class="step-badge">Step 1</div>
+                    <div class="icon-wrapper pulse-anim" style="background: rgba(16,185,129,0.1); color: {COLOR_SECONDARY};">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    </div>
+                    <h2>データの投入と設定</h2>
+                    <p>まずは左側のサイドバーにCSVファイルをドラッグ＆ドロップ。<br>目的変数（売上・CV）と、分析したいメディア変数を選ぶだけで準備完了です。</p>
+                </div>
+                
+                <!-- Slide 3 -->
+                <div class="slide">
+                    <div class="step-badge">Step 2</div>
+                    <div class="icon-wrapper wave-anim" style="background: rgba(139,92,246,0.1); color: #8B5CF6;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    </div>
+                    <h2>モデル・チューニング</h2>
+                    <p>広告の「遅延・残存・飽和」の波の形を設定し、AIによる自動最適化（Auto-Fit）を実行して、最も予測精度の高い統計モデルを構築します。</p>
+                </div>
+                
+                <!-- Slide 4 -->
+                <div class="slide">
+                    <div class="step-badge">Step 3</div>
+                    <div class="icon-wrapper float-anim" style="background: rgba(245,158,11,0.1); color: #F59E0B;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    </div>
+                    <h2>インサイトの発見</h2>
+                    <p>分析オーバービューで、各メディアの真のROI（投資対効果）を確認。<br>さらに、検索を押し上げる「間接効果」や「相乗効果」も可視化されます。</p>
+                </div>
+                
+                <!-- Slide 5 -->
+                <div class="slide">
+                    <div class="step-badge" style="background: {COLOR_ROSE};">Step 4</div>
+                    <div class="icon-wrapper pulse-anim" style="background: rgba(225,29,72,0.1); color: {COLOR_ROSE};">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    </div>
+                    <h2>予算最適化とレポート</h2>
+                    <p>シミュレーターで上限・下限を設定し、限られた予算で成果を最大化。<br>最後は美しい「エグゼクティブ・サマリー」をHTMLレポートとして出力できます。</p>
+                </div>
+            </div>
+            
+            <button class="nav-btn prev-btn" onclick="moveSlide(-1)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button class="nav-btn next-btn" onclick="moveSlide(1)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            
+            <div class="dots">
+                <div class="dot active" onclick="setSlide(0)"></div>
+                <div class="dot" onclick="setSlide(1)"></div>
+                <div class="dot" onclick="setSlide(2)"></div>
+                <div class="dot" onclick="setSlide(3)"></div>
+                <div class="dot" onclick="setSlide(4)"></div>
+            </div>
+        </div>
+
+        <script>
+            let current = 0;
+            const total = 5;
+            const slides = document.getElementById('slides');
+            const dotElements = document.querySelectorAll('.dot');
+            const slideElements = document.querySelectorAll('.slide');
+            
+            function update() {{
+                slides.style.transform = `translateX(-${{current * 20}}%)`;
+                dotElements.forEach((d, i) => d.classList.toggle('active', i === current));
+                slideElements.forEach((s, i) => s.classList.toggle('active', i === current));
+            }}
+            
+            function moveSlide(dir) {{
+                current = (current + dir + total) % total;
+                update();
+            }}
+            
+            function setSlide(idx) {{
+                current = idx;
+                update();
+            }}
+            
+            // 自動再生 (4秒ごと)
+            let timer = setInterval(() => moveSlide(1), 4000);
+            
+            // ホバー時に自動再生を一時停止
+            document.querySelector('.slider-container').addEventListener('mouseenter', () => clearInterval(timer));
+            document.querySelector('.slider-container').addEventListener('mouseleave', () => {{
+                timer = setInterval(() => moveSlide(1), 4000);
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    st.components.v1.html(tutorial_html, height=550)
